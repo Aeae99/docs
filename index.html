@@ -521,6 +521,9 @@ function speak(text) {
   utter.pitch = 0.8; // เสียงต่ำลง เหมือนผู้ชาย
 
   // หาเสียงภาษาไทย โดยเลือกเสียงผู้ชายก่อน
+  if (availableVoices.length === 0) {
+    loadVoices();
+  }
   const thaiVoices = availableVoices.filter(v => v.lang === 'th-TH' || v.lang.startsWith('th'));
   const maleVoice = thaiVoices.find(v => /male|ผู้ชาย|ชาย|narisa|somchai/i.test(v.name));
   if (maleVoice) {
@@ -529,6 +532,7 @@ function speak(text) {
     utter.voice = thaiVoices[0];
   } else {
     showToast('ไม่พบเสียงภาษาไทยในอุปกรณ์');
+    return;
   }
 
   utter.onstart = () => console.log('TTS start:', text);
