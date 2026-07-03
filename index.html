@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="พูดกับฉัน">
+<meta name="theme-color" content="#2563eb">
+<meta name="description" content="เครื่องมือช่วยสื่อสารสำหรับผู้ป่วย">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<title>พูดกับฉัน</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Sukhumvit Set', 'Segoe UI', sans-serif;
+    background: #f0f4f8;
+    height: 100vh;
+    overflow: hidden;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ===== แถบหัว ===== */
+  .header {
+    background: linear-gradient(135deg, #2563eb, #1e40af);
+    color: white;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .header h1 { font-size: 20px; font-weight: 700; }
+
+  /* ===== แถบแท็บหมวดหมู่ ===== */
+  .category-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 8px 10px;
+    background: #e2e8f0;
+    overflow-x: auto;
+    flex-shrink: 0;
+    scrollbar-width: none;
+  }
+  .category-tabs::-webkit-scrollbar { display: none; }
+
+  .cat-tab {
+    background: white;
+    border: 2px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 17px;
+    font-weight: 700;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .cat-tab.active {
+    background: #2563eb;
+    color: white;
+    border-color: #1e40af;
+  }
+  .cat-tab:active { transform: scale(0.93); }
+
+  /* ===== พื้นที่ปุ่ม ===== */
+  .button-area {
+    flex: 1;
+    padding: 12px;
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  .button-area::-webkit-scrollbar { display: none; }
+
+  .phrase-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+
+  .phrase-btn {
+    background: white;
+    border: 3px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 18px 8px;
+    font-size: 22px;
+    font-weight: 700;
+    color: #1e293b;
+    cursor: pointer;
+    transition: all 0.12s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-height: 110px;
+    justify-content: center;
+  }
+  .phrase-btn .icon { font-size: 40px; }
+  .phrase-btn:active {
+    transform: scale(0.92);
+    background: #dbeafe;
+    border-color: #2563eb;
+  }
+  .phrase-btn.recent {
+    border-color: #f59e0b;
+    background: #fffbeb;
+  }
+
+  /* (keyboard CSS removed — replaced by sentence mode) */
+
+  /* ===== แถบล่าง ===== */
+  .bottom-bar {
+    background: white;
+    border-top: 2px solid #e2e8f0;
+    padding: 10px 14px;
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .speak-bar {
+    flex: 1;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 14px;
+    padding: 16px;
+    font-size: 22px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .speak-bar:active { transform: scale(0.97); background: #1e40af; }
+  .clear-btn {
+    background: #fee2e2;
+    color: #dc2626;
+    border: 2px solid #ef4444;
+    border-radius: 14px;
+    padding: 16px 22px;
+    font-size: 20px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .clear-btn:active { transform: scale(0.95); }
+
+  /* ===== Toast ===== */
+  .toast {
+    position: fixed;
+    bottom: 85px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1e293b;
+    color: white;
+    padding: 12px 28px;
+    border-radius: 12px;
+    font-size: 18px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+    z-index: 100;
+  }
+  .toast.show { opacity: 1; }
+
+  <!-- แท็บพิมพ์เอง -->
+  .mode-btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 20px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .mode-btn.active { background: white; color: #2563eb; }
+
+  /* ===== โหมดประโยค ===== */
+  .sentence-page {
+    display: none;
+    flex: 1;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .sentence-page.active { display: flex; }
+
+  .sentence-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 8px 10px;
+    background: #e2e8f0;
+    flex-shrink: 0;
+  }
+  .sentence-tab {
+    background: white;
+    border: 2px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 12px 18px;
+    font-size: 19px;
+    font-weight: 700;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .sentence-tab.active {
+    background: #2563eb;
+    color: white;
+    border-color: #1e40af;
+  }
+  .sentence-tab:active { transform: scale(0.93); }
+
+  .sentence-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    scrollbar-width: none;
+  }
+  .sentence-content::-webkit-scrollbar { display: none; }
+
+  /* ประโยคสำเร็จ */
+  .sentence-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .sentence-btn {
+    background: white;
+    border: 3px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 22px 14px;
+    font-size: 24px;
+    font-weight: 700;
+    color: #1e293b;
+    cursor: pointer;
+    transition: all 0.12s;
+    text-align: center;
+    min-height: 90px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.3;
+  }
+  .sentence-btn:active {
+    transform: scale(0.92);
+    background: #dbeafe;
+    border-color: #2563eb;
+  }
+
+  /* สร้างประโยค */
+  .build-area { display: none; }
+  .build-area.active { display: block; }
+
+  .build-display {
+    background: white;
+    border: 3px solid #2563eb;
+    border-radius: 14px;
+    padding: 16px;
+    font-size: 26px;
+    min-height: 70px;
+    margin-bottom: 12px;
+    color: #1e293b;
+    line-height: 1.4;
+  }
+  .build-display .placeholder { color: #94a3b8; }
+
+  .word-group-label {
+    font-size: 18px;
+    font-weight: 700;
+    color: #475569;
+    margin: 14px 0 8px 0;
+    padding-bottom: 4px;
+    border-bottom: 2px solid #cbd5e1;
+  }
+  .word-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .word-chip {
+    background: #f1f5f9;
+    border: 2px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 14px 18px;
+    font-size: 22px;
+    font-weight: 600;
+    color: #1e293b;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .word-chip:active {
+    transform: scale(0.9);
+    background: #dbeafe;
+    border-color: #2563eb;
+  }
+  .word-chip.back {
+    background: #fee2e2;
+    border-color: #ef4444;
+    color: #dc2626;
+  }
+  .word-chip.clear {
+    background: #fef3c7;
+    border-color: #f59e0b;
+    color: #92400e;
+  }
+
+  /* ===== ไซส์ iPad 10 นิ้ว ===== */
+  @media (min-width: 768px) {
+    .header h1 { font-size: 26px; }
+    .header { padding: 14px 24px; }
+    .mode-btn { font-size: 20px; padding: 12px 24px; }
+
+    .category-tabs { padding: 12px 16px; gap: 10px; }
+    .cat-tab { padding: 16px 24px; font-size: 22px; border-radius: 14px; }
+
+    .button-area { padding: 20px; }
+    .phrase-grid { grid-template-columns: repeat(4, 1fr); gap: 18px; }
+    .phrase-btn {
+      font-size: 28px;
+      min-height: 160px;
+      border-radius: 22px;
+      padding: 24px 12px;
+      gap: 10px;
+    }
+    .phrase-btn .icon { font-size: 56px; }
+
+    .sentence-tab { font-size: 22px; padding: 16px 28px; }
+    .sentence-grid { grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .sentence-btn { font-size: 28px; min-height: 110px; border-radius: 22px; padding: 26px; }
+
+    .build-display { font-size: 32px; padding: 22px; min-height: 90px; }
+    .word-group-label { font-size: 22px; }
+    .word-chip { font-size: 26px; padding: 18px 24px; border-radius: 14px; }
+
+    .speak-bar { font-size: 26px; padding: 20px; }
+    .clear-btn { font-size: 24px; padding: 20px 28px; }
+
+    .toast { font-size: 22px; bottom: 95px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- แถบหัว -->
+<div class="header">
+  <h1>🗣️ พูดกับฉัน</h1>
+  <button class="mode-btn active" id="modePhrases" onclick="switchMode('phrases')">ปุ่มคำพูด</button>
+  <button class="mode-btn" id="modeSentences" onclick="switchMode('sentences')">💬 ประโยค</button>
+</div>
+
+<!-- ===== โหมดปุ่มคำพูด ===== -->
+<div id="phrasesMode" style="flex:1; display:flex; flex-direction:column; overflow:hidden;">
+
+  <!-- แท็บหมวดหมู่ -->
+  <div class="category-tabs" id="catTabs"></div>
+
+  <!-- พื้นที่ปุ่ม -->
+  <div class="button-area" id="buttonArea"></div>
+
+</div>
+
+<!-- ===== โหมดประโยค ===== -->
+<div class="sentence-page" id="sentencesMode">
+
+  <!-- แท็บย่อย: ประโยคสำเร็จ / สร้างประโยค -->
+  <div class="sentence-tabs">
+    <button class="sentence-tab active" onclick="switchSentenceTab('preset')">📌 ประโยคสำเร็จ</button>
+    <button class="sentence-tab" onclick="switchSentenceTab('build')">🧩 สร้างประโยค</button>
+  </div>
+
+  <div class="sentence-content">
+    <!-- ประโยคสำเร็จ -->
+    <div class="build-area active" id="presetArea">
+      <div class="sentence-grid" id="presetGrid"></div>
+    </div>
+
+    <!-- สร้างประโยค -->
+    <div class="build-area" id="buildArea">
+      <div class="build-display" id="buildDisplay"><span class="placeholder">เลือกคำด้านล่างเพื่อสร้างประโยค...</span></div>
+      <div id="wordGroups"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- แถบล่าง -->
+<div class="bottom-bar">
+  <button class="speak-bar" id="speakBtn" onclick="speakCurrent()">🔊 พูด</button>
+  <button class="clear-btn" onclick="clearText()">ล้าง</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== ข้อมูลปุ่มคำพูด =====
+const categories = [
+  { id: 'people', label: '👥 เรียกคน', items: [
+    { icon: '👧', text: 'ษา' },
+    { icon: '🧑', text: 'อั้ม' },
+    { icon: '👵', text: 'แม่' },
+    { icon: '👩‍⚕️', text: 'พยาบาล' },
+  ]},
+  { id: 'needs', label: '📋 ความต้องการ', items: [
+    { icon: '📱', text: 'ขอ iPad' },
+    { icon: '🔄', text: 'พลิกตัว' },
+    { icon: '📺', text: 'เปิดทีวี' },
+    { icon: '🖊️', text: 'ขอปากกา' },
+    { icon: '🚿', text: 'อาบน้ำ' },
+    { icon: '👖', text: 'เปลี่ยนกางเกง' },
+  ]},
+  { id: 'symptoms', label: '🩺 อาการ', items: [
+    { icon: '🩼', text: 'เจ็บ' },
+    { icon: '😤', text: 'สำลัก' },
+    { icon: '😮‍💨', text: 'หายใจไม่ออก' },
+    { icon: '🦵', text: 'เหน็บชา' },
+  ]},
+  { id: 'feelings', label: '😊 ความรู้สึก', items: [
+    { icon: '😊', text: 'ดีใจ' },
+    { icon: '🤩', text: 'ตื่นเต้น' },
+    { icon: '😢', text: 'เสียใจ' },
+    { icon: '😠', text: 'งอน' },
+    { icon: '😡', text: 'โกรธ' },
+  ]},
+  { id: 'food', label: '🍚 อาหาร / น้ำ', items: [
+    { icon: '💧', text: 'น้ำ' },
+    { icon: '🍚', text: 'หิวข้าว' },
+  ]},
+  { id: 'recent', label: '⏱️ พูดล่าสุด', items: [] },
+];
+
+let activeCategory = 'people';
+let recentSpoken = [];
+let currentText = '';
+
+// ===== สร้างแท็บหมวดหมู่ =====
+function renderCatTabs() {
+  const container = document.getElementById('catTabs');
+  container.innerHTML = '';
+  categories.forEach(cat => {
+    const tab = document.createElement('button');
+    tab.className = 'cat-tab' + (cat.id === activeCategory ? ' active' : '');
+    tab.textContent = cat.label;
+    tab.addEventListener('click', () => {
+      activeCategory = cat.id;
+      renderCatTabs();
+      renderButtons();
+    });
+    container.appendChild(tab);
+  });
+}
+
+// ===== สร้างปุ่มในหมวดที่เลือก =====
+function renderButtons() {
+  const area = document.getElementById('buttonArea');
+  area.innerHTML = '';
+  const cat = categories.find(c => c.id === activeCategory);
+
+  if (cat.id === 'recent' && recentSpoken.length === 0) {
+    area.innerHTML = '<p style="color:#94a3b8; font-size:20px; text-align:center; padding:40px;">ยังไม่มีคำพูดล่าสุด<br>กดปุ่มในหมวดอื่นเพื่อพูด</p>';
+    return;
+  }
+
+  const grid = document.createElement('div');
+  grid.className = 'phrase-grid';
+
+  cat.items.forEach(item => {
+    const btn = document.createElement('button');
+    btn.className = 'phrase-btn' + (cat.id === 'recent' ? ' recent' : '');
+    btn.innerHTML = `<span class="icon">${item.icon}</span><span>${item.text}</span>`;
+    btn.addEventListener('click', () => {
+      speak(item.text);
+      addToRecent(item);
+      showToast('🔊 ' + item.text);
+    });
+    grid.appendChild(btn);
+  });
+
+  area.appendChild(grid);
+}
+
+// ===== คำพูดล่าสุด =====
+function addToRecent(item) {
+  recentSpoken = recentSpoken.filter(r => r.text !== item.text);
+  recentSpoken.unshift(item);
+  if (recentSpoken.length > 8) recentSpoken.pop();
+  const cat = categories.find(c => c.id === 'recent');
+  cat.items = recentSpoken;
+  if (activeCategory === 'recent') renderButtons();
+}
+
+// ===== ระบบพูด =====
+function speak(text) {
+  if (!('speechSynthesis' in window)) {
+    showToast('เบราว์เซอร์ไม่รองรับ');
+    return;
+  }
+  speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'th-TH';
+  utter.rate = 0.9;
+  utter.pitch = 0.8; // เสียงต่ำลง เหมือนผู้ชาย
+  const voices = speechSynthesis.getVoices();
+  // หาเสียงภาษาไทย โดยเลือกเสียงผู้ชายก่อน
+  const thaiVoices = voices.filter(v => v.lang === 'th-TH' || v.lang.startsWith('th'));
+  const maleVoice = thaiVoices.find(v => /male|ผู้ชาย|ชาย|narisa|somchai/i.test(v.name));
+  if (maleVoice) {
+    utter.voice = maleVoice;
+  } else if (thaiVoices.length > 0) {
+    utter.voice = thaiVoices[0];
+  }
+  speechSynthesis.speak(utter);
+}
+
+// ===== สลับโหมด =====
+function switchMode(mode) {
+  const phrases = document.getElementById('phrasesMode');
+  const sentences = document.getElementById('sentencesMode');
+  const btnP = document.getElementById('modePhrases');
+  const btnS = document.getElementById('modeSentences');
+  if (mode === 'sentences') {
+    phrases.style.display = 'none';
+    sentences.classList.add('active');
+    btnP.classList.remove('active');
+    btnS.classList.add('active');
+  } else {
+    phrases.style.display = 'flex';
+    sentences.classList.remove('active');
+    btnP.classList.add('active');
+    btnS.classList.remove('active');
+  }
+}
+
+// ===== ปุ่มพูดล่าง =====
+function speakCurrent() {
+  if (currentText.trim()) {
+    speak(currentText);
+    showToast('🔊 ' + currentText);
+  } else if (buildText.trim()) {
+    speak(buildText);
+    showToast('🔊 ' + buildText);
+  } else {
+    showToast('ยังไม่มีข้อความ — กดปุ่มหรือสร้างประโยคก่อน');
+  }
+}
+
+function clearText() {
+  currentText = '';
+  buildText = '';
+  updateBuildDisplay();
+  showToast('ล้างข้อความแล้ว');
+}
+
+// ===== ประโยคสำเร็จ =====
+const presetSentences = [
+  'สวัสดีครับ',
+  'ขอบคุณมากครับ',
+  'เป็นห่วงนะ',
+  'วันนี้อยากไปข้างนอก',
+  'แมวออกไปข้างนอกแล้ว',
+  'อยากอยู่บ้าน',
+  'ขี้เกียจออกกำลังกาย',
+  'ไม่สบายใจ',
+  'อยากกลับบ้าน',
+  'เหนื่อยมาก',
+  'อยากคุยกับแม่',
+  'ฝันดีนะ',
+];
+
+function renderPresetSentences() {
+  const grid = document.getElementById('presetGrid');
+  grid.innerHTML = '';
+  presetSentences.forEach(text => {
+    const btn = document.createElement('button');
+    btn.className = 'sentence-btn';
+    btn.textContent = text;
+    btn.addEventListener('click', () => {
+      speak(text);
+      showToast('🔊 ' + text);
+    });
+    grid.appendChild(btn);
+  });
+}
+
+// ===== สร้างประโยค =====
+const wordGroups = [
+  { label: '👤 ประธาน', words: ['ผม', 'เธอ', 'คุณ', 'แม่', 'ษา', 'อั้ม', 'พยาบาล', 'หมอ', 'เพื่อน'] },
+  { label: '🏃 กริยา', words: ['ไป', 'มา', 'หยิบ', 'ขอ', 'หล่น', 'เปิด', 'ปิด', 'เงียบ', 'ดู', 'ฟัง', 'กิน', 'ดื่ม', 'นอน', 'นั่ง', 'ลุก', 'พลิก'] },
+  { label: '📦 กรรม', words: ['หมอน', 'ตุ๊กตา', 'ผ้าห่ม', 'รีโมท', 'พัดลม', 'ทีวี', 'iPad', 'โทรศัพท์', 'น้ำ', 'ข้าว', 'ยา', 'กางเกง', 'ผ้าเช็ดตัว'] },
+  { label: '➕ คำเติม', words: ['ไม่', 'มาก', 'นะ', 'ครับ', 'แล้ว', 'หน่อย', 'ได้ไหม', 'ด้วย'] },
+  { label: '🏠 สถานที่', words: ['ที่บ้าน', 'ในห้อง', 'ข้างนอก', 'โรงพยาบาล', 'ห้องน้ำ'] },
+];
+
+let buildText = '';
+
+function renderWordGroups() {
+  const container = document.getElementById('wordGroups');
+  container.innerHTML = '';
+
+  wordGroups.forEach(group => {
+    const label = document.createElement('div');
+    label.className = 'word-group-label';
+    label.textContent = group.label;
+    container.appendChild(label);
+
+    const chips = document.createElement('div');
+    chips.className = 'word-chips';
+
+    group.words.forEach(word => {
+      const chip = document.createElement('button');
+      chip.className = 'word-chip';
+      chip.textContent = word;
+      chip.addEventListener('click', () => addWord(word));
+      chips.appendChild(chip);
+    });
+
+    container.appendChild(chips);
+  });
+
+  // ปุ่มลบ + ล้าง
+  const actionRow = document.createElement('div');
+  actionRow.className = 'word-chips';
+  actionRow.style.marginTop = '16px';
+
+  const backChip = document.createElement('button');
+  backChip.className = 'word-chip back';
+  backChip.textContent = '⌫ ลบ';
+  backChip.addEventListener('click', backspaceBuild);
+  actionRow.appendChild(backChip);
+
+  const clearChip = document.createElement('button');
+  clearChip.className = 'word-chip clear';
+  clearChip.textContent = '🧹 ล้าง';
+  clearChip.addEventListener('click', () => { buildText = ''; updateBuildDisplay(); });
+  actionRow.appendChild(clearChip);
+
+  container.appendChild(actionRow);
+}
+
+function addWord(word) {
+  if (!buildText) {
+    buildText = word;
+  } else {
+    buildText += ' ' + word;
+  }
+  updateBuildDisplay();
+}
+
+function backspaceBuild() {
+  buildText = buildText.trim().split(' ').slice(0, -1).join(' ');
+  updateBuildDisplay();
+}
+
+function updateBuildDisplay() {
+  const el = document.getElementById('buildDisplay');
+  if (buildText) {
+    el.innerHTML = buildText;
+  } else {
+    el.innerHTML = '<span class="placeholder">เลือกคำด้านล่างเพื่อสร้างประโยค...</span>';
+  }
+}
+
+// ===== สลับแท็บประโยค =====
+function switchSentenceTab(tab) {
+  const tabs = document.querySelectorAll('.sentence-tab');
+  const preset = document.getElementById('presetArea');
+  const build = document.getElementById('buildArea');
+  tabs.forEach(t => t.classList.remove('active'));
+  tabs[tab === 'preset' ? 0 : 1].classList.add('active');
+  if (tab === 'preset') {
+    preset.classList.add('active');
+    build.classList.remove('active');
+  } else {
+    preset.classList.remove('active');
+    build.classList.add('active');
+  }
+}
+
+// ===== Toast =====
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ===== เริ่มต้น =====
+renderCatTabs();
+renderButtons();
+renderPresetSentences();
+renderWordGroups();
+
+// ===== Service Worker (สำหรับ PWA / ออฟไลน์) =====
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(err => console.log('SW error:', err));
+}
+
+// ป้องกัน double-tap zoom
+let lastTouch = 0;
+document.addEventListener('touchend', e => {
+  const now = Date.now();
+  if (now - lastTouch < 300) e.preventDefault();
+  lastTouch = now;
+}, { passive: false });
+</script>
+</body>
+</html>
