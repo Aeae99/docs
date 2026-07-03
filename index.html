@@ -492,26 +492,51 @@ function addToRecent(item) {
   if (activeCategory === 'recent') renderButtons();
 }
 
-// ===== ระบบพูด =====
+// ===== ระบบพูด (รองรับ iOS Safari) =====
+let availableVoices = [];
+let activeUtterance = null;
+
+function loadVoices() {
+  availableVoices = speechSynthesis.getVoices();
+}
+
 function speak(text) {
   if (!('speechSynthesis' in window)) {
     showToast('เบราว์เซอร์ไม่รองรับ');
     return;
   }
-  speechSynthesis.cancel();
+  if (!text || !text.trim()) return;
+
+  // ยกเลิกเฉพาะเมื่อกำลังพูดหรือมีคิวรอ
+  if (speechSynthesis.speaking || speechSynthesis.pending) {
+    speechSynthesis.cancel();
+  }
+
+  // iOS Safari ต้องเรียก resume() ก่อน speak()
+  speechSynthesis.resume();
+
   const utter = new SpeechSynthesisUtterance(text);
   utter.lang = 'th-TH';
   utter.rate = 0.9;
   utter.pitch = 0.8; // เสียงต่ำลง เหมือนผู้ชาย
-  const voices = speechSynthesis.getVoices();
+
   // หาเสียงภาษาไทย โดยเลือกเสียงผู้ชายก่อน
-  const thaiVoices = voices.filter(v => v.lang === 'th-TH' || v.lang.startsWith('th'));
+  const thaiVoices = availableVoices.filter(v => v.lang === 'th-TH' || v.lang.startsWith('th'));
   const maleVoice = thaiVoices.find(v => /male|ผู้ชาย|ชาย|narisa|somchai/i.test(v.name));
   if (maleVoice) {
     utter.voice = maleVoice;
   } else if (thaiVoices.length > 0) {
     utter.voice = thaiVoices[0];
+  } else {
+    showToast('ไม่พบเสียงภาษาไทยในอุปกรณ์');
   }
+
+  utter.onstart = () => console.log('TTS start:', text);
+  utter.onend = () => { console.log('TTS end'); activeUtterance = null; };
+  utter.onerror = (e) => { console.log('TTS error:', e.error); showToast('เกิดข้อผิดพลาดในการพูด'); activeUtterance = null; };
+
+  activeUtterance = utter;
+  // ห้ามย้ายบรรทัดนี้ไปใน await/setTimeout/Promise — ต้องอยู่ใน user gesture call stack
   speechSynthesis.speak(utter);
 }
 
@@ -690,6 +715,12 @@ function showToast(msg) {
 }
 
 // ===== เริ่มต้น =====
+// โหลดเสียง TTS (iOS โหลดทีหลัง ต้องรอ voiceschanged)
+if ('speechSynthesis' in window) {
+  loadVoices();
+  speechSynthesis.addEventListener('voiceschanged', loadVoices);
+}
+
 renderCatTabs();
 renderButtons();
 renderPresetSentences();

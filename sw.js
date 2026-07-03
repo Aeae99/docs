@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aac-v1';
+const CACHE_NAME = 'aac-v2';
 const FILES = [
   './',
   './index.html',
@@ -24,7 +24,25 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  const req = e.request;
+
+  // HTML / navigation: network-first, fallback to cache
+  if (req.mode === 'navigate' || req.destination === 'document' ||
+      (req.headers.get('accept') || '').includes('text/html')) {
+    e.respondWith(
+      fetch(req)
+        .then(res => {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(req, copy));
+          return res;
+        })
+        .catch(() => caches.match(req).then(r => r || caches.match('./index.html')))
+    );
+    return;
+  }
+
+  // Other assets: cache-first, fallback to network
   e.respondWith(
-    caches.match(e.request).then(response => response || fetch(e.request))
+    caches.match(req).then(response => response || fetch(req))
   );
 });
