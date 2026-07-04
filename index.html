@@ -14,7 +14,7 @@
 <link rel="icon" href="icon-192.png">
 <title>พูดกับฉัน</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 
   body {
     font-family: 'Sukhumvit Set', 'Segoe UI', sans-serif;
@@ -508,6 +508,8 @@ function speak(text) {
   if (!text || !text.trim()) return;
 
   // ยกเลิกเฉพาะเมื่อกำลังพูดหรือมีคิวรอ
+  // iOS bug: cancel() แล้ว speak() ทันทีในสแต็กเดียวกันอาจทำให้เสียงใหม่ถูกเพิกเฉย
+  // แต่ถ้าไม่ cancel แล้วพูดซ้อน เสียงจะคิวรอต่อกัน — เลือกที่จะ cancel เพื่อตัดเสียงเดิม
   if (speechSynthesis.speaking || speechSynthesis.pending) {
     speechSynthesis.cancel();
   }
@@ -531,8 +533,9 @@ function speak(text) {
   } else if (thaiVoices.length > 0) {
     utter.voice = thaiVoices[0];
   } else {
-    showToast('ไม่พบเสียงภาษาไทยในอุปกรณ์');
-    return;
+    // ไม่มีเสียงไทยที่ระบุชื่อ — ปล่อยให้ utter.voice เป็น undefined
+    // iOS/ระบบจะจับคู่เสียงเองจาก utter.lang = 'th-TH'
+    showToast('ไม่พบเสียงภาษาไทยแบบระบุชื่อ กำลังใช้เสียงเริ่มต้น');
   }
 
   utter.onstart = () => console.log('TTS start:', text);
@@ -735,13 +738,8 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(err => console.log('SW error:', err));
 }
 
-// ป้องกัน double-tap zoom
-let lastTouch = 0;
-document.addEventListener('touchend', e => {
-  const now = Date.now();
-  if (now - lastTouch < 300) e.preventDefault();
-  lastTouch = now;
-}, { passive: false });
+// ป้องกัน double-tap zoom ด้วย CSS touch-action: manipulation (ดูใน <style>)
+// ไม่ใช้ preventDefault() บน touchend เพราะบน iOS Safari จะบล็อก synthetic click event
 </script>
 </body>
 </html>
